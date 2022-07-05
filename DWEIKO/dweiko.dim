@@ -1,0 +1,2 @@
+      parameter (nmax=10,nstmax=50,nbmax=410,ngrid=210)
+

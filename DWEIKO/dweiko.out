@@ -1,0 +1,60 @@
+  
+ ****       Output of progam DWEIKO       ****
+  
+ Input parameters:
+ -----------------
+   Nuclear mass and charge numbers                        :   16   8  154  52
+   Laboratory energy/per nucleon [MeV]                    :     3.8
+   Option for the excited nucleus [0(1) for proj (targ)]  :  0
+   Integration parameters (NGRID,NB,BMIN,ACCUR)           :  210   200    0.0     0.0010
+   Output of optical potential 0(no) 1(yes)               :  0
+   Output of elastic cross section 0(no) 1(cm)  2(lab.)   :  2
+   Output of inelastic cross section 0(no) 1(cm)  2(lab)  :  2
+   Statistical tensors(1)  gamma-rays distrib(2)  none(0) :  1
+   Nuclear excitation [0: none   1: vibrational]          :  0
+   Optical Pot. [0:no  1:WS   2:read  3:t-rho-rho  4:M3Y] :  1
+   V0_real[MeV],R[fm],d[fm],V0_imag[MeV],R_I[fm],d_I[fm]  :   50.00    8.41    0.80   58.00    8.41    0.80
+   Number of nuclear states =  5
+
+  State     E [MeV]     Spin 
+    1        0.000      0.0
+    2        0.082      2.0
+    3        0.267      4.0
+    4        0.544      6.0
+    5        0.903      8.0
+
+ Reduced matrix elements - units: [M/E;L = e * fm^L]
+ ---------------------------------------------------
+                E1        E2         E3         M1         M2
+ 1 -->  2     0.0000     2.0650     0.0000     0.0000     0.0000
+ 2 -->  3     0.0000     3.2800     0.0000     0.0000     0.0000
+ 3 -->  4     0.0000     4.2980     0.0000     0.0000     0.0000
+ 4 -->  5     0.0000     5.1470     0.0000     0.0000     0.0000
+
+ B(E/M;L)-values - units: [e^2 * b^L]
+ ------------------------------------
+                E1        E2         E3         M1         M2
+ 1 -->  2     0.0000     0.0004     0.0000     0.0000     0.0000
+ 2 -->  3     0.0000     0.0011     0.0000     0.0000     0.0000
+ 3 -->  4     0.0000     0.0018     0.0000     0.0000     0.0000
+ 4 -->  5     0.0000     0.0026     0.0000     0.0000     0.0000
+   
+  Useful quantities
+  -----------------
+    beta   (v/c)                        :     0.089
+    gamma  (Lorentz factor)             :     1.004
+    eta (Sommerfeld parameter)          :    34.059
+    k (wavenumber)                [1/fm]:     6.143
+    Minimum impact parameter        [fm]:     0.000
+    Maximum Coulomb scatter. angle [deg]:    60.565
+    Number of coupled channels          : 45
+
+    Total nuclear reaction cross section (mb) =   561.01
+
+ Excitation cross sections in mb
+ -------------------------------
+ State   2  =    0.752E+02
+ State   3  =    0.103E+01
+ State   4  =    0.210E-01
+ State   5  =    0.388E-03
+ Total      =    0.763E+02
