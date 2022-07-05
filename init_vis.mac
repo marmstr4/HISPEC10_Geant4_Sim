@@ -1,0 +1,52 @@
+#
+# Set some default verbose
+/control/verbose 2
+/control/saveHistory
+/run/verbose 2
+#
+# Change the default number of threads (in multi-threaded mode)
+#/run/numberOfThreads
+#
+# Initialize kernel
+/run/initialize
+#
+# Visualization setting
+
+/vis/open DAWNFILE
+
+
+/vis/drawVolume
+
+/vis/viewer/set/viewpointVector -1 0 0
+/vis/viewer/set/lightsVector -1 0
+
+/vis/viewer/set/style wireframe
+/vis/viewer/set/auxiliaryEdge true
+/vis/viewer/set/lineSegmentsPerCircle 100
+
+/vis/scene/add/trajectories smooth
+/vis/modeling/trajectories/create/drawByCharge
+/vis/modeling/trajectories/drawByCharge-0/default/setDrawStepPts true
+/vis/modeling/trajectories/drawByCharge-0/default/setStepPtsSize 2
+
+/vis/modeling/trajectories/drawByCharge-0/set 0 red
+/vis/modeling/trajectories/drawByCharge-0/set -1 green
+/vis/modeling/trajectories/drawByCharge-0/set 1 blue
+
+/vis/scene/add/hits
+
+#/vis/filtering/trajectories/create/particleFilter
+#/vis/filtering/trajectories/particleFilter-0/add gamma
+
+/vis/scene/endOfEventAction accumulate 2000
+
+/vis/geometry/set/visibility World 0 false
+
+/vis/verbose warnings
+
+#/gun/particle ion
+#/gun/ion 28 64
+#/gun/energy 512 MeV
+#/gun/direction 0 0 1
+#/gun/number 4000
+/run/beamOn 50000
