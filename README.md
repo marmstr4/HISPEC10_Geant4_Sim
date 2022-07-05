@@ -26,3 +26,5 @@ CLX and DWEIKO will need to be compiled individually with fortran 77 and fortran
 It is reccomended to install gfortran it includes them both. The makefile should detect the correct version to use in each case.
 
 Once the build directory is constructed with cmake and filled with sybolic links to the clx and dweiko executables the final installation can be made by calling make.
+
+This will generate an executable called wires, which can be run with ./wires
