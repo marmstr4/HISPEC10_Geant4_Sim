@@ -1,0 +1,61 @@
+	SUBROUTINE FIT ( E11,E22,NS,L,N,ALPHA,EE )
+C
+	REAL*8 A(23),B(4),C(23),D(4,23),E(23),F(23),H(23),S(23),T(23)
+	REAL*8 X,Y,ST(23)
+	COMMON / C1 / A,B,C,D,E,F,H,S,T,X,Y,ST
+	DIMENSION ERG(23,3),EN(23),ALPHA(23)
+	DATA ERG/1.0,1.7,3.0,6.2,10.,14.,20.,28.,40.,53.,70.,83.,100.,123.
+	1,150.,215.,300.,390.,500.,730.,1000.,1250.,1500.,1.,1.7,3.0,6.2,10.
+	2,14.,20.,28.,40.,53.,70.,83.,100.,123.,150.,215.,300.,390.,500.
+	3,730.,1000.,1500.,0.,1.,2.,4.,8.,15.,25.,40.,52.,70.,103.,150.,280.
+	4,500.,10*0./
+C
+	E1=E11
+	E2=E22
+	ES=E1
+	IF ( NS .EQ. 1 ) E2=E1
+	E1=-E1+1.
+	E2=-E2+1.
+	NE2=-E2+.501
+	NN=N
+	IF ( ES .LT. 0. ) NN=N+5
+	  DO 15 I=6,NN
+	  M=ERG(I,NS)+.01
+	  J=M+NE2
+	  IF ( M .LT. 150 ) THEN
+	   J=(10*J+5)/10
+	  ELSE IF ( M .LT. 390 ) THEN
+	   J=5*((10*J+25)/50)
+	  ELSE IF ( M .LT. 1000 ) THEN
+	   J=10*((J+5)/10)
+	  ELSE
+	   J=50*((J+25)/50)
+	  END IF
+	  EN(I)=J
+15	  C(I)=EN(I)+E1
+	IF ( ES .LT. 0. ) GO TO 30
+	   DO 16 I=1,5
+	   C(I)=ERG(I,NS)
+16	   EN(I)=ERG(I,NS)-E1
+	   DO 17 I=1,N
+17	   C(I)=LOG(SQRT((1021.952+C(I))*C(I)))
+	 W=EE+E1
+	 X=LOG(SQRT((1021.952+W)*W))
+	 M=2*L+1
+	   DO 19 I=1,N
+19	   A(I)=LOG(ALPHA(I)*EN(I)**M)
+	 CALL SPLINE ( N )
+	 ALPHA(1)=EXP(Y)/EE**M
+	GO TO 33
+30	   DO 31 I=1,N
+	   C(I)=LOG(EN(I+5))
+31	   A(I)=LOG(ALPHA(I))
+	 X=LOG(EE)
+	 CALL SPLINE(N)
+	 ALPHA(1)=EXP(Y)
+33	L1=0
+	IF ( ES .LT. 0. ) L1=5
+	M1=N+L1
+	IF ( EE .LT. EN(L1+1) .OR. EE .GT. EN(M1) ) ALPHA(1)=-1.
+	RETURN
+	END  
