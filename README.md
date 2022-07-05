@@ -23,6 +23,6 @@ ln -s PATH/HISPEC10_Geant4_Sim/CLX PATH/HISPEC10_Geant4_Sim/build/clx
 
 CLX and DWEIKO will need to be compiled individually with fortran 77 and fortran 90 compilers respectively. 
 
-gfortran is reccomended as it includes them both. The makefile should detect the correct version to use in each case.
+It is reccomended to install gfortran it includes them both. The makefile should detect the correct version to use in each case.
 
 once the build directory is constructed with cmake and filled with sybolic links to the clx and dweiko executables the final installation can be made by calling make.
