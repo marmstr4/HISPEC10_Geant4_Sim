@@ -31,6 +31,7 @@
 
 #include "G4InelasticCoulombScattering.hh"
 #include "Randomize.hh"
+#include "G4NistManager.hh"
 
 using std::istringstream;
 
@@ -74,18 +75,25 @@ G4InelasticCoulombScattering::G4InelasticCoulombScattering(const G4String& proce
   K0=0;
   K1=0;
   id=-1;
-  Emax=2400*MeV;
+  //Emax=1000*MeV;
   Enhance=1;
-  BinWidth=150*MeV;
-  minEnergyDweiko=4000*MeV;
-  maxEnergyClx=2400*MeV;
-  ExE=2614.511*keV;
-  //ExE=9.8445*MeV;
-  //ExE=11.356*MeV;
-  //ExE=11.096*MeV;
+  //Emax=6*64*MeV;
+  Emax=700*MeV;
+  BinWidth=20*MeV;
+  coulombbarrier=290*MeV;
+  //minEnergyDweiko=1000*coulombbarrier*MeV-BinWidth*5;
+  minEnergyDweiko=coulombbarrier*MeV-50;
+  //maxEnergyClx=790*MeV;
+  maxEnergyClx=390*MeV;
+  ExE=1345*keV;
+  //ExE=605.9*keV;
+  angleBinning=1;
+  SafeCoulexDweiko=true;
+  SafeCoulexClx=true;
 
 
-  WriteOutKinematics = true;
+
+  WriteOutKinematics = false;
   if(WriteOutKinematics){
 	G4cout <<"Syntax in kinematic file 'kin.dat' (P-> Projectile, R->Recoil):"<<G4endl;
 	G4cout <<"Ptheta(lab)[°] <> Rtheta(lab)[°] <> Ptheta(COM)[°] <> Eout-Ein[MeV] <> PkinE[MeV] <> RkinE[MeV]"<<G4endl;
@@ -103,6 +111,7 @@ G4InelasticCoulombScattering::~G4InelasticCoulombScattering() {
 
 G4bool G4InelasticCoulombScattering::IsApplicable(const G4ParticleDefinition& particle)
 {
+
   	G4int Z=static_cast<G4int>(particle.GetPDGCharge());
   	G4int A=particle.GetBaryonNumber();
   	if      (particle == *( G4Deuteron::Deuteron()     )) return true;
@@ -111,8 +120,13 @@ G4bool G4InelasticCoulombScattering::IsApplicable(const G4ParticleDefinition& pa
   	else if (particle == *( G4He3::He3()               )) return true;
   	else if (particle == *( G4GenericIon::GenericIon() )) return true;
   	else if (Z > 0 && A > 0)                              return true;
-
-  return false;
+    /*
+    G4int Z=static_cast<G4int>(particle.GetPDGCharge());
+  	G4int A=particle.GetBaryonNumber();
+    G4cout<<Z<<" "<<A<<G4endl;
+    if (Z==28 && A==64) {G4cout<<"true"<<G4endl;return true;}
+    */
+    return false;
 }
 
 // output of the function must be in units of length! L=1/sig_V,sig_V=SUM(n(j,i)*sig(j,i)),
@@ -168,6 +182,8 @@ G4double G4InelasticCoulombScattering::GetMeanFreePath(const G4Track& aTrack, G4
 	//Projectile mass and charge number, kinetic energy
   	G4int pZ=static_cast<G4int>(projectileDefinition->GetPDGCharge());
   	G4int pA=projectileDefinition->GetBaryonNumber();
+    //G4int pZ = 28;
+    //G4int pA = 64;
 	G4double pKinE= projectile->GetKineticEnergy();
 
 /// No coulex if projectile kin. Energy is lower than excitation energy
@@ -182,6 +198,8 @@ G4double G4InelasticCoulombScattering::GetMeanFreePath(const G4Track& aTrack, G4
 // check wether material is in the list in vector 'Materials'. If not, collect data on it and save list of Isotopes present in this material with their Z,A and nucleus density in the vector Isotopes[i][j] where i is the id of the material (to be found from vector Materials[i], numbering is same for both, and j refers to the different isotopes. Get number of Isotopes in Material i with Isotopes[i].size()
 
   G4int nE=0;
+
+  //if (aTrack.GetMaterial()->GetName()!="Ge_Au") return DBL_MAX;
 
 
   if(prevMat==0 || prevMat != aTrack.GetMaterial()){
@@ -215,7 +233,7 @@ G4double G4InelasticCoulombScattering::GetMeanFreePath(const G4Track& aTrack, G4
 	idE =0;
 	if(pKinE>Emax){
 	  idE=nEbins-1;
-	  G4cout << "!!! exception: Encountered kinetic energy exceeding cross section table. Table end at " << Emax/MeV << "Mev, particle has " << pKinE/MeV << "MeV" << G4endl;
+	  //G4cout << "!!! exception: Encountered kinetic energy exceeding cross section table. Table end at " << Emax/MeV << "Mev, particle has " << pKinE/MeV << "MeV" << G4endl;
 	}
 	else while(pKinE>E_vals[idE]) idE++;	//store index of first Energy bin with Energy higher than pKinE
 
@@ -307,7 +325,7 @@ void G4InelasticCoulombScattering::AddMaterial(G4Material* newMat, G4int pZ, G4i
         }
 
         //array with angle bins for creation of the cross section histogram
-angleBinning =1;
+        angleBinning =1;
 	G4int AngleBin=(180+angleBinning)/angleBinning;
 
 	G4double* T_vals;
@@ -388,11 +406,14 @@ angleBinning =1;
 
 			  if(k<=upperBinClx){
 			    //fill table "clx-only"  with clx calculation only
-			    ThisXsecTableClx[k].xsec_sum 	= GetXSecClx(E_vals[k], pZ, pA, ThisIso.Z, ThisIso.A);  // write xsec table to private variable xsecTempTable, function returns integrated cross section
+
+			    ThisXsecTableClx[k].xsec_sum 	= 100*GetXSecClx(E_vals[k], pZ, pA, ThisIso.Z, ThisIso.A);  // write xsec table to private variable xsecTempTable, function returns integrated cross section
 			    ThisXsecTableClx[k].xsec		= xsecTempTableClx;
+          //Limit CLX to below
+
 			    ThisXsecTableClx[k].partial_inv_mfp = ThisXsecTableClx[k].xsec_sum*ThisIso.density;
 			    //G4cout << "   CLX: " << ThisXsecTableClx[k].xsec_sum/barn*1000 << " mbarn ";
-          //G4cout <<E_vals[k]/MeV<<","<<ThisXsecTableClx[k].xsec_sum/barn*1000 <<G4endl;;
+          G4cout << "   CLX: " <<E_vals[k]/MeV/64<<","<<ThisXsecTableClx[k].xsec_sum/barn*1000 << " mbarn "<<G4endl;;
 
 			    if(k<=lowerBinDweiko){
 			       //fill table "both" with clx calculation
@@ -418,12 +439,16 @@ angleBinning =1;
 			  }
 			  if(k>=lowerBinDweiko){
 			    //fill table "dweiko-only" with dweiko calculation only
-			    ThisXsecTableDweiko[k].xsec_sum 	   = GetXSecDweiko(E_vals[k], pZ, pA, ThisIso.Z, ThisIso.A);  // write xsec table to private variable xsecTempTable, function returns integrated cross section
+			    ThisXsecTableDweiko[k].xsec_sum = 100000*GetXSecDweiko(E_vals[k], pZ, pA, ThisIso.Z, ThisIso.A);  // write xsec table to private variable xsecTempTable, function returns integrated cross section
 			    ThisXsecTableDweiko[k].xsec		   = xsecTempTableDweiko;
 			    ThisXsecTableDweiko[k].partial_inv_mfp = ThisXsecTableDweiko[k].xsec_sum*ThisIso.density;
-			    G4cout << "   DWEIKO: " << ThisXsecTableDweiko[k].xsec_sum/barn*1000 << " mbarn ";
-
+			    G4cout << "   DWEIKO: " <<E_vals[k]/MeV/64<<","<< ThisXsecTableDweiko[k].xsec_sum/barn*1000<< " mbarn "<<G4endl;
+         //G4cout << "   DWEIKO: " <<E_vals[k]/MeV<<","<<ThisXsecTableClx[k].xsec_sum/barn*1000 << " mbarn "<<G4endl;;
+        //G4cout << "   DWEIKO: " <<E_vals[k]/MeV/74<<","<<ThisXsecTableDweiko[k].xsec_sum/barn*1000 << " mbarn "<<G4endl;;
 			    if(k>=upperBinClx){
+
+
+
 			      //fill table "both" with dweiko calculation only
 			      ThisXsecTable[k].xsec_sum        = ThisXsecTableDweiko[k].xsec_sum;
 			      xsecTempTable=xsecTempTableDweiko;
@@ -444,8 +469,11 @@ angleBinning =1;
 				ThisXsecTableDweiko[k].xsec=xsecTempTableDweiko;
 				ThisXsecTableDweiko[k].partial_inv_mfp = 0;
 			  }
+
 			  if((k>lowerBinDweiko)&&(k<upperBinClx)){
 			    // now the table "both" gets filled with a linear extrapolation of dweiko an clx
+
+
 			    G4double factorClx=((upperBinClx-lowerBinDweiko)-(k-lowerBinDweiko))/(upperBinClx-lowerBinDweiko);
 			    G4double factorDweiko=1-factorClx;
 
@@ -460,9 +488,10 @@ angleBinning =1;
 			    }
 			    ThisXsecTable[k].xsec=xsecTempTable;
 			    ThisXsecTable[k].partial_inv_mfp = ThisXsecTableClx[k].partial_inv_mfp*factorClx+ThisXsecTableDweiko[k].partial_inv_mfp*factorDweiko;
-			  }
 
-			  //G4cout << "   COMBINED: " << ThisXsecTable[k].xsec_sum/barn*1000 << " mbarn " << G4endl;
+			     }
+
+			  //G4cout << "   COMBINED: "<<E_vals[k]/MeV/64<<" "<<ThisXsecTable[k].xsec_sum/barn*1000 << " mbarn " << G4endl;
 
 			   //create vector with differential cross section for creating the histogram
 			  for(unsigned int theta=0; theta<xsecTempTable.size(); theta++){
@@ -503,9 +532,6 @@ angleBinning =1;
         ThisIsoVector.clear();
 }
 
-/// ///////////////////////////////////// ///
-/// Post Step Do It: Generate Final state ///
-/// ///////////////////////////////////// ///
 G4VParticleChange* G4InelasticCoulombScattering::PostStepDoIt(const G4Track& track, const G4Step& step){
 //variables needed here
     G4double mfp_sum=0;
@@ -523,21 +549,28 @@ G4VParticleChange* G4InelasticCoulombScattering::PostStepDoIt(const G4Track& tra
     G4double pKinE;		//projectile kinetic Energy before scattering off target nucleus in Lab System
     G4double pKinEScat;		//projectile kinetic Energy after scattering off target nucleus in Lab System
     G4double tKinEScat;		//target (recoil) kinetic energy in Lab system
-
+    G4double velocity = track.GetVelocity();
 /// get it from the messenger!
     G4bool WriteOutKinematics=false;
 
+
 /// Information on projectile
     const G4DynamicParticle* projectile = track.GetDynamicParticle();	//pointer to Projectile
+
     G4ParticleDefinition* projectileDefinition=projectile->GetDefinition();
+
     pKinE= projectile->GetKineticEnergy(); 				//projectile kinetic Energy
+
     G4ParticleMomentum pDir = projectile->GetMomentumDirection();	//projectile direction: It is a unit three-vector
+
     //G4double Momentum = projectile->GetTotalMomentum(); 		//Momentum
     G4int pZ=static_cast<G4int>(projectileDefinition->GetPDGCharge());  //projectile Z
+
     G4int pA=projectileDefinition->GetBaryonNumber();			//projectile A
 
-    G4cout<<"excitation energy is "<<ExE<<G4endl;
-    if(VerboseLevel>1) G4cout << "COULEX::PSDI: Projectile Z="<<pZ<<", A="<<pA<<", Ekin="<< std::scientific << std::setprecision(3)<<pKinE/MeV<<"MeV"<<G4endl;
+
+
+    //if (pZ == 28 && pA == 64) {
 
 /// Information on Target
     //Target Material cannot have changed since MFP was calculated last time (it's recalculated at material boundaries)
@@ -567,7 +600,6 @@ G4VParticleChange* G4InelasticCoulombScattering::PostStepDoIt(const G4Track& tra
     if(VerboseLevel>2) G4cout<<"	      Picked target nucleus with Z="<<Isotopes[id][IsoID].Z<<" and A="<<Isotopes[id][IsoID].A << G4endl;
 
 // array of interpolated cross section per angle
-//id=0; IsoID=0;
     xsecdata xsec_interpol[181];
     for(int i=0; i<181; i++){
 	xsec_interpol[i].angle=Isotopes[id][IsoID].xsec_table[idE].xsec[i].angle;
@@ -596,7 +628,8 @@ G4VParticleChange* G4InelasticCoulombScattering::PostStepDoIt(const G4Track& tra
     if(pAngleTheta/degree<0) pAngleTheta=0;
     if(pAngleTheta/degree>180) pAngleTheta=180*degree;
 
-    if(VerboseLevel>2) G4cout << "	      CM projectile polar scattering angle is "<< std::scientific << std::setprecision(3)<<pAngleTheta/degree<<"°"<<G4endl;
+    //if(VerboseLevel>2)
+    // G4cout << "	      CM projectile polar scattering angle is "<< std::scientific << std::setprecision(3)<<pAngleTheta/degree<<"°"<<G4endl;
 
     pAnglePhi = 360*G4UniformRand()*degree; 	//projectile azimuthal angle phi is arbitary (no polarisation involved)
     if(pAnglePhi/degree > 180)tAnglePhi = pAnglePhi-180*degree;		//recoil will get azimuthal angle pAnglePhi+180° to conserve momentum
@@ -635,7 +668,8 @@ G4VParticleChange* G4InelasticCoulombScattering::PostStepDoIt(const G4Track& tra
     tAnglePsi  = std::atan(std::sin(pAngleTheta/rad)*std::sqrt(1-V2) / ((-1.0)*std::cos(pAngleTheta/rad)+rho2))*rad;
     t2cos = std::cos(tAnglePsi/rad);
 
-    if(VerboseLevel>1) G4cout << "COULEX::PSDI: Projectile lab polar angle: "<< std::scientific << std::setprecision(3)<<pAnglePsi/degree<<"°, recoil lab polar angle: "<<std::scientific << std::setprecision(3)<<tAnglePsi/degree<<"°"<<G4endl<<"	      Projectile lab azimuthal angle: "<< std::scientific << std::setprecision(3)<<pAnglePhi/degree<<"°, recoil lab azimuthal angle: "<< std::scientific << std::setprecision(3)<<tAnglePhi/degree<<"°"<<G4endl;
+    //if(VerboseLevel>1)
+    //G4cout << "COULEX::PSDI: Projectile lab polar angle: "<< std::scientific << std::setprecision(3)<<pAnglePsi/degree<<"°, recoil lab polar angle: "<<std::scientific << std::setprecision(3)<<tAnglePsi/degree<<"°"<<G4endl<<"	      Projectile lab azimuthal angle: "<< std::scientific << std::setprecision(3)<<pAnglePhi/degree<<"°, recoil lab azimuthal angle: "<< std::scientific << std::setprecision(3)<<tAnglePhi/degree<<"°"<<G4endl;
 
 
     //projectile and recoil lab total energies after scattering
@@ -673,7 +707,8 @@ G4VParticleChange* G4InelasticCoulombScattering::PostStepDoIt(const G4Track& tra
     tKinEScat=(tEg-mii)*MeV;
 
     //if(VerboseLevel>1)
-    if(VerboseLevel>0)G4cout << "COULEX::PSDI: coulex at "<< std::fixed << std::setprecision(3) << pKinE/MeV << "MeV, recoil kinetic Energy: " << tKinEScat/MeV <<"MeV, scattered projectile kinetic Energy: "<< std::scientific << std::setprecision(3)<<pKinEScat/MeV<<"MeV"<<G4endl;
+    //if(VerboseLevel>0)
+    //G4cout << "COULEX::PSDI: coulex at "<< std::fixed << std::setprecision(3) << pKinE/MeV << "MeV, recoil kinetic Energy: " << tKinEScat/MeV <<"MeV, scattered projectile kinetic Energy: "<< std::scientific << std::setprecision(3)<<pKinEScat/MeV<<"MeV"<<G4endl;
 
      // a file showing the kinematics of the reaction
      if(WriteOutKinematics){
@@ -682,179 +717,91 @@ G4VParticleChange* G4InelasticCoulombScattering::PostStepDoIt(const G4Track& tra
 	of. close();
      }
 
-    double projectile_velocity = track.GetVelocity();
 
-     /// Create recoiling target ion
+/// Create recoiling target ion
     aParticleChange.Initialize(track);
-
     G4TouchableHandle trTouchable = track.GetTouchableHandle();
-    G4ParticleDefinition* theRecoilDefinition = G4ParticleTable::GetParticleTable()->GetIonTable()->GetIon(Isotopes[id][IsoID].Z,Isotopes[id][IsoID].A,0);
-    if(VerboseLevel>1)G4cout << "COULEX::PSDI: RECOIL identified as " << theRecoilDefinition->GetParticleName() << G4endl;
-    G4double sintPsi = std::sin(tAnglePsi/rad);
-    G4ThreeVector recoilDirection(std::cos(tAnglePhi/rad)*sintPsi,std::sin(tAnglePhi/rad)*sintPsi,std::cos(tAnglePsi/rad));	//so far with respect to the direction of the projectile before scattering
-    recoilDirection.rotateUz(pDir);		//Transforming reference frame: 'New z-axis' is the projectile incident direction
-    //G4cout <<"	      After rotating reference frame to direction of incident projectile:"<<G4endl<<"	      recoil polar angle: "<<recoilDirection.theta()*rad/degree<<"°, azimuthal angle: "<<recoilDirection.phi()*rad/degree<<"°"<<G4endl;
-    G4DynamicParticle* theRecoil = new G4DynamicParticle(theRecoilDefinition, recoilDirection, tKinEScat);
-    //G4Track* RecoilTrack = new G4Track(theRecoil, localtime, position );
-    //RecoilTrack->SetTouchableHandle(trTouchable);
-    //aParticleChange.SetNumberOfSecondaries(1);
-    //aParticleChange.AddSecondary(theRecoil);
-    //aParticleChange.AddSecondary( RecoilTrack );
 
     /// Update projectile properties
-
-
-
-    //}
-
     G4double sinpPsi = std::sin(pAnglePsi/rad);
     G4ThreeVector ProjectileNewDirection(std::cos(pAnglePhi/rad)*sinpPsi,std::sin(pAnglePhi/rad)*sinpPsi,std::cos(pAnglePsi/rad));
-
-    ProjectileNewDirection.rotateUz(pDir);
-    aParticleChange.ProposeEnergy(pKinEScat);
-    aParticleChange.ProposeLocalEnergyDeposit(pKinE-pKinEScat);
-    aParticleChange.ProposeMomentumDirection(ProjectileNewDirection) ;
-
-    if(VerboseLevel>0)G4cout <<"COULEX::PSDI: ---------------------------------------------------"<<G4endl<< G4endl;
-
+    //ProjectileNewDirection.rotateUz(pDir);
+    //ProjectileNewDirection = G4ThreeVector(0,0,1);
+    //ProjectileNewDirection = ProjectileNewDirection.unit();
 
     G4ParticleTable* particleTable2;
-    G4IonTable* ionTable = G4IonTable::GetIonTable();
     particleTable2 = G4ParticleTable::GetParticleTable();
-    //G4ParticleDefinition* beam  = ionTable->GetIon(pZ,pA,0.);
-    //G4ParticleDefinition* tar = ionTable->GetIon(theRecoilDefinition->GetPDGCharge(),    theRecoilDefinition->GetPDGMass(),    0.);
 
-    G4NuclearLevelData* levelData = G4NuclearLevelData::GetInstance();
-    //levelData->AddPrivateData(Z, A, lvlDataFileNames[j]);
-
-    const G4LevelManager* levelManager = levelData->GetLevelManager(pZ, pA);
-    G4int Nentries = levelManager->NumberOfTransitions()+1;
-
+    G4ParticleDefinition* gamma = particleTable2->FindParticle("gamma");
     G4double theta = CLHEP::twopi*G4UniformRand(), phi = acos(2*G4UniformRand()-1);
     G4double ux = std::sin(phi)*std::cos(theta);
     G4double uy = std::sin(phi)*std::sin(theta);
     G4double uz = std::cos(phi);
 
-    G4ThreeVector directions(ux,uy,uz);
+    G4ThreeVector directions = G4ThreeVector(ux,uy,uz);
+    //G4ThreeVector directions = G4ThreeVector(0,1,0);
+    G4NistManager* nist = G4NistManager::Instance();
 
-    G4ThreeVector beam_dir(0,0,1);
+    if (pZ==28 && pA==64 && (track.GetMaterial() == nist->FindOrBuildMaterial("G4_Au"))) {
+    //if (pZ==30 && pA==74) {
 
-    //directions.rotateUz(pDir);
+    G4cout << "COULEX::PSDI: Projectile Z="<<pZ<<", A="<<pA<<", Ekin="<< std::scientific << std::setprecision(3)<<pKinE/MeV<<"MeV"<<G4endl;
 
-    //G4cout<<"Projectile velocity "<<projectile_velocity<<G4endl;
-    //G4cout<<"Kinetic energy "<<pKinEScat/MeV<<G4endl;
-    //G4cout<<"Projectile mass "<<projectile->GetMass()<<G4endl;
-    //G4cout<<"Projectile direction (r,theta,phi) (sin(phi)cos(theta),sin(phi)sin(theta),cos(phi)) "<<"("<<ProjectileNewDirection[0]<<","<<ProjectileNewDirection[1]<<"," <<ProjectileNewDirection[2]<<")"<<G4endl;
-    //G4cout<<G4endl;
+      G4NuclearLevelData* levelData = G4NuclearLevelData::GetInstance();
+      const G4LevelManager* levelManager = levelData->GetLevelManager(pZ, pA);
+      //G4int Nentries = levelManager->NumberOfTransitions()+1;
 
-
-    //G4double velocity = track.GetVelocity();
-
-    G4double time_taken = (log(G4UniformRand())/log(0.5))*levelManager->LifeTime(1);
-    G4double time = track.GetGlobalTime();
-    aParticleChange.ProposeGlobalTime(time+time_taken);
-
-    G4double lightspeed = 299.792; //mm/ns;
-
-    G4double angle = directions.angle(beam_dir);
-
-    //G4double energy = levelManager->LevelEnergy(1)/MeV;
-
-    G4double velocity = projectile_velocity;
-
-    G4double beta = velocity/lightspeed;
-
-    G4double factor = sqrt(1.0 - beta*beta)/(1-beta*cos(angle));
-
-    G4double energy = levelManager->LevelEnergy(1)/MeV;
-
-    energy = energy/factor;
+      directions = directions.unit();
 
 
-    //energy = energy*(1-(projectile_velocit/lightspeed)*(velocity/lightspeed))*(1+(velocity/lightspeed)*std::cos(directions(2)));
-
-    G4DynamicParticle* gamma = new G4DynamicParticle(particleTable2->FindParticle("gamma"),directions,energy);
-
-    G4ThreeVector position = track.GetPosition();
-
-    G4ThreeVector gamma_position(position[0]+velocity*ProjectileNewDirection[0]*time_taken,position[1]+velocity*ProjectileNewDirection[1]*time_taken,position[2]+velocity*ProjectileNewDirection[2]*time_taken);
-
-    aParticleChange.SetNumberOfSecondaries(1);
-    //aParticleChange.AddSecondary(theRecoil);
-    aParticleChange.AddSecondary(gamma,gamma_position);
-
-    //G4cout<<"gamma velocity "<<velocity<<G4endl;
-    //G4cout<<"beta "<<beta<<G4endl;
-    //G4cout<<"Kinetic energy "<<aParticleChange.GetEnergy()/MeV<<G4endl;;
-    //G4cout<<"gamma direction (r,phi,theta) (sin(theta)cos(phi),sin(theta)sin(phi),cos(theta)) "<<"("<<directions[0]<<","<<directions[1]<<"," <<directions[2]<<")"<<G4endl;
-    //G4cout<<"angle "<<angle<<G4endl;
-    G4cout<<"energy "<<energy*factor<<G4endl;
-    G4cout<<"factor "<<factor<<G4endl;
-    G4cout<<"energy shifted "<< levelManager->LevelEnergy(1)/keV - energy/keV<<G4endl;
+      //G4double time_taken = (log(G4UniformRand())/log(0.5))*levelManager->LifeTime(1);
+      G4double time = track.GetGlobalTime();
+      //aParticleChange.ProposeGlobalTime(time+100);
 
 
-    //G4cout<<G4endl<<"Coulomb Excitation with Energy, Lifetime"<<levelManager->LevelEnergy(1)/MeV<<","<<levelManager->LifeTime(1)/CLHEP::ps<<G4endl;4
-    std::ofstream doppler_out;
+      G4double lightspeed = 299.792; //mm/ns;
+      G4double angle = directions.angle(ProjectileNewDirection);
+      G4double beta = velocity/lightspeed;
+      G4double factor = sqrt(1.0 - beta*beta)/(1-beta*cos(angle));
+      G4double energy = levelManager->LevelEnergy(1)/MeV;
+      //G4double energy = 0.5*MeV;
+      G4double energy_gam = energy;
+      energy = energy/factor;
+
+      //G4cout<<beta<<G4endl;
+
+      //G4ThreeVector gamma_position(position[0]+velocity*ProjectileNewDirection[0]*time_taken,position[1]+velocity*ProjectileNewDirection[1]*time_taken,position[2]+velocity*ProjectileNewDirection[2]*time_taken);
+      G4ThreeVector gamma_position = track.GetPosition();
+
+      std::ofstream doppler_out ("doppler_out.dat");
+      doppler_out<<gamma_position.getX()<<" "<<gamma_position.getY()<<" "<<gamma_position.getZ()<<" "<<angle<<" "<<beta<<" "<<energy_gam<<" "<<energy<<" "<<factor<<" "<<directions.getX()<<" "<<directions.getY()<<" "<<directions.getZ()<<" "<<ProjectileNewDirection.getX()<<" "<<ProjectileNewDirection.getY()<<" "<<ProjectileNewDirection.getZ()<<" "<<pKinEScat/MeV<<" "<<pAnglePsi/degree<<" "<<pAngleTheta/degree;
+
+  	  G4DynamicParticle* gamma_part = new G4DynamicParticle(gamma, directions, energy);
+
+      aParticleChange.SetNumberOfSecondaries(1);
+      aParticleChange.AddSecondary(gamma_part, gamma_position);
 
 
-    doppler_out.open("doppler_out.dat", std::ios_base::app); // output file
-    doppler_out << beta << " " << angle << " " << energy << " " << time << " " << time_taken <<std::endl;
+    G4double time_taken = 0.00333;
+    G4ThreeVector ion_position = track.GetPosition();
+    G4ThreeVector ion_step(ion_position[0]+velocity*ProjectileNewDirection[0]*time_taken,ion_position[1]+velocity*ProjectileNewDirection[1]*time_taken,ion_position[2]+velocity*ProjectileNewDirection[2]*time_taken);
 
-    return G4VDiscreteProcess::PostStepDoIt(track,step);
 
-    /*
-    G4ParticleTable* particleTable2;
-    G4IonTable* ionTable = G4IonTable::GetIonTable();
-    particleTable2 = G4ParticleTable::GetParticleTable();
-    G4NuclearLevelData* levelData = G4NuclearLevelData::GetInstance();
-    const G4LevelManager* levelManager = levelData->GetLevelManager(pZ, pA);
-    G4int Nentries = levelManager->NumberOfTransitions()+1;
 
-    pDir = pDir.unit();
 
-    G4ThreeVector p_mom (pDir[0]*Momentum,pDir[1]*Momentum,pDir[2]*Momentum);
-    G4double energy = levelManager->LevelEnergy(1)/MeV;
+  }
 
-    G4double theta = CLHEP::twopi*G4UniformRand(), phi = acos(2*G4UniformRand()-1);
-    G4double ux = std::sin(phi)*std::cos(theta);
-    G4double uy = std::sin(phi)*std::sin(theta);
-    G4double uz = std::cos(phi);
+  aParticleChange.ProposeEnergy(pKinEScat);
+  aParticleChange.ProposeLocalEnergyDeposit(pKinE-pKinEScat);
+  //aParticleChange.ProposeLocalTime(100);
+  aParticleChange.ProposeMomentumDirection(ProjectileNewDirection);
 
-    G4ThreeVector directions(ux,uy,uz);
-    directions = directions.unit();
-    G4ThreeVector gamma_mom (directions[0]*energy);
-    G4double c = 300000000;
+  return G4VDiscreteProcess::PostStepDoIt(track,step);
 
-    G4ThreeVector ProjectileNewDirection;
-    ProjectileNewDirection.setX(sqrt(p_mom[0]*p_mom[0]*p_mom[0]*p_mom[0]+mi*mi*mi*mi*c*c*c*c+2*mi*mi*c*c*p_mom[0]*p_mom[0]-2*mi*mi*c*c*gamma_mom[0]-2*gamma_mom[0]*p_mom[0]*p_mom[0]+gamma_mom[0]*gamma_mom[0]-m1*m1*c*c));
-    ProjectileNewDirection.setY(sqrt(p_mom[1]*p_mom[1]*p_mom[1]*p_mom[1]+mi*mi*mi*mi*c*c*c*c+2*mi*mi*c*c*p_mom[1]*p_mom[1]-2*mi*mi*c*c*gamma_mom[1]-2*gamma_mom[1]*p_mom[1]*p_mom[1]+gamma_mom[1]*gamma_mom[1]-m1*m1*c*c));
-    ProjectileNewDirection.setZ(sqrt(p_mom[2]*p_mom[2]*p_mom[2]*p_mom[2]+mi*mi*mi*mi*c*c*c*c+2*mi*mi*c*c*p_mom[2]*p_mom[2]-2*mi*mi*c*c*gamma_mom[2]-2*gamma_mom[2]*p_mom[2]*p_mom[2]+gamma_mom[2]*gamma_mom[2]-m1*m1*c*c));
-
-    aParticleChange.ProposeEnergy(pKinEScat);
-    aParticleChange.ProposeLocalEnergyDeposit(pKinE-pKinEScat);
-    aParticleChange.ProposeMomentumDirection(ProjectileNewDirection) ;
-
-    G4double time_taken = (log(G4UniformRand())/log(0.5))*levelManager->LifeTime(1);
-    G4double time = track.GetGlobalTime();
-    aParticleChange.ProposeGlobalTime(time+time_taken);
-
-    G4double lightspeed = 299.792; //mm/ns;
-    G4double angle = directions.angle(ProjectileNewDirection);
-    G4double beta = velocity/lightspeed;
-    G4double factor = sqrt(1.0 - beta*beta)/(1-beta*cos(angle));
-
-    energy = energy/factor;
-
-    G4DynamicParticle* gamma = new G4DynamicParticle(particleTable2->FindParticle("gamma"),directions,energy);
-    G4ThreeVector position = track.GetPosition();
-    G4ThreeVector gamma_position(position[0]+velocity*ProjectileNewDirection[0]*time_taken,position[1]+velocity*ProjectileNewDirection[1]*time_taken,position[2]+velocity*ProjectileNewDirection[2]*time_taken);
-
-    aParticleChange.SetNumberOfSecondaries(1);
-    //aParticleChange.AddSecondary(theRecoil);
-    aParticleChange.AddSecondary(gamma,gamma_position);
-
-    */
 }
+
+
+
 
 
 //Functions for calculation of maximum safe coulex angle http://web-docs.gsi.de/~wolle/EB_at_GSI/FRS-WORKING/PHYSICS/GRAZING/grazing.html
@@ -900,7 +847,7 @@ G4double G4InelasticCoulombScattering::GetXSecClx(G4double kinE, G4int &pZ, G4in
 	std::ofstream of("clx.dat", std::ios::out); // output file
 	of <<  std::endl;		//empty header to input file
 	of << "00000000" << std::endl;	//output options to input filename
-	of << "2	1	10" << std::endl;	//number of states to be considered, a useless number(max multipol?), max. M quantum number, default is 10 (must be greater then ground state spin
+	of << "2	4	10" << std::endl;	//number of states to be considered, a useless number(max multipol?), max. M quantum number, default is 10 (must be greater then ground state spin
 	of << "0	0	0" << std::endl;	//accuracy (use standart e-8), max Param XI (use standert 6), E1 polarization (use standart 0.005)
 	//infos on projectile
 	of << pZ << "	" << pA << std::endl;
@@ -912,6 +859,8 @@ G4double G4InelasticCoulombScattering::GetXSecClx(G4double kinE, G4int &pZ, G4in
 	// The angle for safe coulex is calcutated by "UsedCoulombBar".
 	// Beyond the coulomb barrier cross sections calculated by CLX are used if the safty condition is fulfilled.
 	// This can be controlled by the SafeAngleDweiko-botton.
+
+    //G4cout<<UsedCoulombBar(pA, tA, pZ, tZ)<<" "<<pA<<" "<<pZ<<" "<<tA<<" "<<tZ<<G4endl;
 
 	if((kinE/MeV>UsedCoulombBar(pA, tA, pZ, tZ))&&(SafeCoulexClx==true)){
 	   G4double ThetaRound= ThetaCOM(kinE, pA, tA, pZ, tZ)/degree+1.;
@@ -935,14 +884,15 @@ of << "4	"<<6.0<<"	"<<0.739<<"	"<<1<<"	"<<0.0 << std::endl;
 
 // 	G4cout << "ThetaCOMInt=" << ThetaCOMInt << G4endl;
 
-of << "1	"<<179<<"	"<< 1 << std::endl; //Theta_min, Theata_max, Delta_Theta. If you make it dynamic: change dimension of xsec-array!
+of << "1	"<<180<<"	"<< 1 << std::endl; //Theta_min, Theata_max, Delta_Theta. If you make it dynamic: change dimension of xsec-array!
 // infos on nuclear states
 //gs
 of << "1	" <<0<< "	"<<0<<"	"<<1<<"	"<<0.0 << std::endl;
 //first excited state
-of << "2	"<<3.0<<"	"<<2.614511<<"	"<<-1<<"	"<<0.0 << std::endl;
+of << "2	"<<2.0<<"	"<<1.345<<"	"<<1<<"	"<<0.0 << std::endl;
+//of << "2	"<<2.0<<"	"<<0.6059<<"	"<<1<<"	"<<0.0 << std::endl;
 
-//of << "3	" <<2.0<< "	"<<9.8445<<"	"<<1<<"	"<<0.0 << std::endl;
+//of << "3	" <<4.0<< "	"<<3.308<<"	"<<1<<"	"<<0.0 << std::endl;
 //of << "4	" <<4.0<< "	"<<10.356<<"	"<<1<<"	"<<0.0 << std::endl;
 //of << "5	" <<4.0<< "	"<<11.0967<<"	"<<1<<"	"<<0.0 << std::endl;
 //of << "4	"<<6.0<<"	"<<0.5437<<"	"<<1<<"	"<<0.0 << std::endl;
@@ -964,14 +914,19 @@ of << "5	"<<1.0<<"	"<<7.11685<<"	"<<-1<<"	"<<0.0 << std::endl;
 
 //Matrix Elements, Assuming electric transition of multipole order lambda
 //of <<"1	2	"<<2.065<<"	"<<2<< std::endl;// M(E<lambda> state1->state2)
-of <<"2	1	"<<0.611<<"	"<<3<< std::endl;
+//of <<"2	1	"<<0.611<<"	"<<3<< std::endl;
+of <<"1	2	"<<0.11857<<"	"<<2<< std::endl;// M(E<lambda> state1->state2)
+//of <<"1	2	"<<0.68<<"	"<<2<< std::endl;
+//of <<"2	2	"<<0.6093<<"	"<<2<< std::endl;// M(E<lambda> state1->state2)
+//of <<"2	3	"<<0.3529<<"	"<<2<< std::endl;// M(E<lambda> state1->state2)
+//of <<"3	3	"<<0.4588<<"	"<<2<< std::endl;// M(E<lambda> state1->state2)
+//of <<"2	1	"<<0.20405<<"	"<<2<< std::endl;// M(E<lambda> state1->state2)
 //of <<"3	1	"<<0.566<<"	"<<2<< std::endl;
 //of <<"4	2	"<<4.1688<<"	"<<2<< std::endl;
 //of <<"5	2	"<<0.527<<"	"<<2<< std::endl;
 //of <<"2	3	"<<3.280<<"	"<<2 << std::endl;	//M(E<lambda> state2->state2) (quadrupole moment for lambda=2)
 //of <<"3	4	"<<4.298<<"	"<<2 << std::endl;
 //of <<"4	5	"<<5.147<<"	"<<2 << std::endl;
-
 
 	of.close();
 
@@ -1030,23 +985,26 @@ of <<"2	1	"<<0.611<<"	"<<3<< std::endl;
 
 	    //numerical integration of the cross section over the solid angle element
 	    //(excluding phi-integration: multiply by 2Pi on return)
-//Here to edit cross section tempdatClx.xsec=10000*fabs(xsecClx)*barn*std::sin(tempdatClx.angle/rad)*deg2rad*angleBinning*TwoPi;
+//Here to edit cross section tempdatClx.xsec=1000*fabs(xsecClx)*barn*std::sin(tempdatClx.angle/rad)*deg2rad*angleBinning*TwoPi;
 
-	    tempdatClx.xsec=1000*fabs(xsecClx)*barn*std::sin(tempdatClx.angle/rad)*deg2rad*angleBinning*TwoPi;
+
+	    tempdatClx.xsec=fabs(xsecClx)*barn*std::sin(tempdatClx.angle/rad)*deg2rad*angleBinning*TwoPi;
 	    xsecTempTableClx.push_back(tempdatClx);
 	    xsec_sumClx+=tempdatClx.xsec;
 	    ///loop until here
-
 	    anglecount++;
 	  }
 	}
 
 	tempdatClx.xsec=0*barn;
 	for( int i=0; i*angleBinning<=180; i++){
-	  if((i*angleBinning) > ThetaCOMInt){
+	  //if((i*angleBinning) > ThetaCOMInt){
 	    tempdatClx.angle=i*angleBinning*degree;
 	    xsecTempTableClx.push_back(tempdatClx);
-	  }
+
+      //G4cout<<tempdatClx.xsec/barn<<" "<<tempdatClx.angle/degree<<" "<<i*angleBinning<<G4endl;
+
+	  //}
 	}
 
 	fi.close();
@@ -1062,10 +1020,10 @@ G4double G4InelasticCoulombScattering::GetXSecDweiko(G4double kinE, G4int &pZ, G
 
 	//stringstream for conversion of strings to double/integer
 	istringstream isst;
-
+if (tA==1) {tA=2;}
 	std::ofstream of("dweiko.in", std::ios::out); // output file
 	of <<  std::endl;		//empty header to input file
-	of << pA <<"	"<< pZ <<"	"<< tA <<"	"<< tZ <<"	"<< (kinE/MeV)/pA << std::endl;
+	of << pA <<"      "<< pZ <<"    "<< 2 <<"      "<< 1 <<"      "<< (kinE/MeV)/pA  << std::endl;
 
 	// IW=0(1) for projectile (target) excitation.
 	// IOPM=1(0) for output (none) of optical model potentials.
@@ -1073,13 +1031,13 @@ G4double G4InelasticCoulombScattering::GetXSecDweiko(G4double kinE, G4int &pZ, G
 	// IOINEL=(0)[1]{2} for (no) [center of mass] {laboratory} inelastic scattering cross section.
 	// IOGAM=(0)[1]{2} for (no) output [output of statistical tensors] {output of  gamma-ray angular distributions}
 	// IW=0(1)   IOPM=0(1)    IOELAS=0(1)[2]    IOINEL=0(1)[2]   IOGAM=0(1)[2]
-	of <<0<<"	"<<"1	"<<"2	"<<"2 "<<"1	"<< std::endl;
+	of <<0<<"         "<<0<<"            "<<0<<"                 "<<1<<"                "<<0<< std::endl;
 	// NB=number of impact parameter points (NB <= NBMAX). currently 200
 	// ACCUR=accuracy required for time integration at each impact parameter.
 	// BMIN=minimum impact parameter (enter 0 for default)
 	// IOB=1(0) prints (does not print) out impact parameter probabilities.
 	// NB         ACCUR        BMIN[fm]     IOB=1(0)
-	of <<"200	"<<"0.0001	"<<"0	"<<"0	"<< std::endl;
+	of <<200<<"        "<<0.001<<"        "<<0<<"           "<<0<< std::endl;
 	// OMP switch:
 	// IOPW=0 (no OMP)          IOPNUC=0 (no nuclear)
 	// 1 (Woods-Saxon)            1 (vibrational excitations)
@@ -1087,14 +1045,14 @@ G4double G4InelasticCoulombScattering::GetXSecDweiko(G4double kinE, G4int &pZ, G
 	// 3 (t-rho-rho folding potential)
 	// 4 (M3Y folding potential)
 	// IOPW                       IOPNUC
-	of <<"0	"<<"0	"<< std::endl;
+	of <<"       "<<1<<"                          "<<0<< std::endl;
 
 	// If IOPW=1, enter V0_ws [VI_ws] = real part [imaginary] (>0, both) of Woods-Saxon.
         // r0_ws [r0I_ws] = radius parameter (R_ws = r0 * (ap^1/3 + at^1/3).
         // d_ws [dI_ws]  = diffuseness.
 	// If IOPW is not equal to 1, place a '#' sign at the beginning of this line, or delete it.
 	// V0 [MeV]     r0[fm]      d[fm]      VI [MeV]     r0_I [fm]     dI [fm]
-  //of <<"50.	"<<"1.067	"<<"0.8	"<<"58.	"<<"1.067	"<<"0.8	"<< std::endl;
+  of <<50.<<"          "<<1.067<<"       "<<0.8<<"        "<<58.<<"          "<<1.067<<"         "<<0.8<< std::endl;
 
 	//The angle for safe coulex is calcutated by "UsedCoulombBar". Use the double angle range for Dweiko only.
 	// This can be controlled by the SafeAngleDweiko-botton.
@@ -1109,35 +1067,37 @@ G4double G4InelasticCoulombScattering::GetXSecDweiko(G4double kinE, G4int &pZ, G
 	// center of mass), and NTHETA (<= NGRID), the number of points in scatering angle.
 	// If IOELAST or IOINEL are not 1, or 2, place a '//' sign at the beginning of this line
 	// THMAX       NTHETA
-  ThetaCOMInt=180;
-  angleBinning=180;
+  //ThetaCOMInt=180;
 
-	of <<20 <<"	"<<200<< std::endl;
+
+	//of <<ThetaCOMInt <<"	"<<ThetaCOMInt/angleBinning<< std::endl;
+  of <<45. <<"          "<<100<< std::endl;
 
 	// If IOINEL=1 enter the state (JINEL) for the inelastic angular distribution.
 	// If IOINEL is not 1, or 2, place a '//' sign at the beginning of this line
 
 	// JINEL
-  of <<"2	"<< std::endl;
+  of <<2<< std::endl;
 	// NST: number of nuclear levels (<= NSTMAX).
-	of <<"4	"<<std::endl;
+	of <<2<<std::endl;
 	// state label (I), energy (EX), and  spin (SPIN).
 	// I ranges from 1 to NST.
 	// I     Ex[MeV]    SPIN
-  of << "1	" <<0<< "	"<<0<<"	"<<1<<"	"<<0.0 << std::endl;
+  of <<1 <<"        "<<0.000<<"      "<<0<< std::endl;
 	//first excited state
-	of << "2	"<<0.5361<<"	"<<2.0<<std::endl;
-  of << "3	"<<0.699<<"	"<<4.0<<std::endl;
-  of << "4	"<<0.739<<"	"<<6.0<<std::endl;
+  of << 2<<"        "<<1.345<<"	    "<<2.0<<std::endl;
+  //of << 2<<"        "<<0.6059<<"	    "<<2.0<<std::endl;
 	// Reduced matrix elements for E1, E2, E3, M1 and M2 excitations:
 	// <I_j||O(E/M;L)||I_i>,      j > i , for the electromagnetic transitions.
 	// To stop, add a row of zeros at the end of this list
 
 	//if((lambda==1)&&((p0*p1)==-1)){
 	// i -> j   *E1[e fm]*  E2[e fm^2]  E3[e fm^3]   M1[e fm]   M2[e fm^2]
-	of <<"2	"<<"1	"<<"0 "<<"	0.79	"<<"0	"<<"0	"<<"0	"<< std::endl;
-	of <<"3	"<<"2	"<<"0 "<<"	0.129	"<<"0	"<<"0	"<<"0	"<< std::endl;
-	of <<"4	"<<"3	"<<"0	"<<"  1.74 "<<"0	"<<"0	"<<"0	"<< std::endl;
+	of <<1<<"    "<<2<<"   "<<0<<"         "<<0.11857<<"      "<<0<<"            "<<0<<"          "<<0<<std::endl;
+  //of <<1<<"    "<<2<<"   "<<0<<"         "<<0.68<<"      "<<0<<"            "<<0<<"          "<<0<<std::endl;
+  of <<0<<"    "<<0<<"   "<<0<<"         "<<0<<"      "<<0<<"            "<<0<<"          "<<0<<std::endl;
+  of <<std::endl;
+	//of <<"0	"<<"0	"<<"0 "<<"	0	"<<"0	"<<"0	"<<"0	"<< std::endl;
 	//}
   /*
 	if((lambda==1)&&((p0*p1)==1)){
@@ -1167,7 +1127,7 @@ G4double G4InelasticCoulombScattering::GetXSecDweiko(G4double kinE, G4int &pZ, G
 
 	}
 */
-of <<"0	"<<"0	"<<"0	"<<"0	"<<"0	"<<"0	"<<"0	"<< std::endl;
+
 	of.close();
 
 	///run DWEIKO

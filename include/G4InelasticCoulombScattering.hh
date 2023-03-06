@@ -230,6 +230,7 @@ private:
   G4double angleBinning;
   G4double maxEnergyClx;
   G4double minEnergyDweiko;
+  G4double coulombbarrier;
   G4bool SafeCoulexClx;
   G4bool SafeCoulexDweiko;
   G4Material* prevMat;
