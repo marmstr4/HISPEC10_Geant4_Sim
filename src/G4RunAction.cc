@@ -1,3 +1,4 @@
+
 #include "G4RunAction.hh"
 #include "G4PrimaryGeneratorAction.hh"
 #include "G4DetectorConstruction.hh"
@@ -54,18 +55,88 @@ G4RunAction::G4RunAction()
   analysisManager->CreateNtupleDColumn("DSSSD1_timing");
   analysisManager->CreateNtupleDColumn("DSSSD2_energy");
   analysisManager->CreateNtupleDColumn("DSSSD2_timing");
-  analysisManager->CreateNtupleDColumn("Scintillator_timing");
-  analysisManager->CreateNtupleDColumn("Scintillator_energy");
   analysisManager->CreateNtupleDColumn("Ge_x");
   analysisManager->CreateNtupleDColumn("Ge_y");
   analysisManager->CreateNtupleDColumn("Ge_z");
   analysisManager->CreateNtupleDColumn("Ge_timing");
   analysisManager->CreateNtupleDColumn("Ge_energy");
   analysisManager->CreateNtupleDColumn("Ge_energy_doppler");
-  analysisManager->CreateNtupleDColumn("Theta");
-  analysisManager->CreateNtupleDColumn("Beta");
-  analysisManager->CreateNtupleDColumn("gamma_angle");
-  analysisManager->CreateNtupleDColumn("ion_angle");
+  analysisManager->CreateNtupleDColumn("beta_TOF");
+  analysisManager->CreateNtupleDColumn("angle");
+  analysisManager->CreateNtupleDColumn("mass");
+  analysisManager->CreateNtupleDColumn("charge");
+  analysisManager->CreateNtupleDColumn("DSSSD2_x");
+  analysisManager->CreateNtupleDColumn("DSSSD2_y");
+  analysisManager->CreateNtupleDColumn("DSSSD2_z");
+  analysisManager->CreateNtupleDColumn("coulex_energy");
+  analysisManager->CreateNtupleDColumn("shifted_energy");
+  analysisManager->CreateNtupleDColumn("perfect_energy");
+  analysisManager->CreateNtupleDColumn("coulex_beta");
+  analysisManager->CreateNtupleDColumn("coulex_angle");
+  analysisManager->CreateNtupleDColumn("beta_DSSSD");
+  analysisManager->CreateNtupleDColumn("ftar_x");
+  analysisManager->CreateNtupleDColumn("ftar_y");
+  analysisManager->CreateNtupleDColumn("ftar_z");
+  analysisManager->CreateNtupleDColumn("ftar_energy");
+  analysisManager->CreateNtupleDColumn("beta_tar");
+  analysisManager->CreateNtupleDColumn("angle_diff");
+  analysisManager->CreateNtupleDColumn("beta_diff");
+  analysisManager->CreateNtupleDColumn("factor_diff");
+  analysisManager->CreateNtupleDColumn("MCPvsreal_tar_x_diff");// mid target position vs MCP reconstruction
+  analysisManager->CreateNtupleDColumn("MCPvsreal_tar_y_diff");
+  analysisManager->CreateNtupleDColumn("MCPvsreal_tar_z_diff");
+  analysisManager->CreateNtupleDColumn("coulexvsMCP_tar_x_diff"); //MCP reconstrution vs real coulex position
+  analysisManager->CreateNtupleDColumn("coulexvsMCP_tar_y_diff");
+  analysisManager->CreateNtupleDColumn("coulexvsMCP_tar_z_diff");
+  analysisManager->CreateNtupleDColumn("coulex_ion_direction_vs_ion_scatter_dir");//real coulex direction vs dir between ge and real position
+  analysisManager->CreateNtupleDColumn("coulex_direction_vs_reco_gamma_dir");//dir between ge and tar vs dir between ge and real position
+  analysisManager->CreateNtupleDColumn("reco_coulex_angle_vs_read_out");
+  analysisManager->CreateNtupleDColumn("scattering");
+  analysisManager->CreateNtupleDColumn("scattering_lab");
+  analysisManager->CreateNtupleDColumn("scattering_energy");
+  analysisManager->CreateNtupleDColumn("polar_lab");
+  analysisManager->CreateNtupleDColumn("polar_com");
+  analysisManager->CreateNtupleDColumn("lab_ion_angle");
+  analysisManager->CreateNtupleDColumn("target_energy");
+  analysisManager->CreateNtupleDColumn("safe_coulex");
+  analysisManager->CreateNtupleDColumn("crystal");
+  analysisManager->CreateNtupleDColumn("dead_crystal");
+  analysisManager->CreateNtupleDColumn("deg_x");
+  analysisManager->CreateNtupleDColumn("deg_y");
+  analysisManager->CreateNtupleDColumn("deg_z");
+  analysisManager->CreateNtupleDColumn("deg_energy");
+  analysisManager->CreateNtupleDColumn("deg_mass");
+  analysisManager->CreateNtupleDColumn("deg_charge");
+  analysisManager->CreateNtupleDColumn("z1_x");
+  analysisManager->CreateNtupleDColumn("z1_y");
+  analysisManager->CreateNtupleDColumn("z1_z");
+  analysisManager->CreateNtupleDColumn("z1_energy");
+  analysisManager->CreateNtupleDColumn("z1_mass");
+  analysisManager->CreateNtupleDColumn("z1_charge");
+  analysisManager->CreateNtupleDColumn("z2_x");
+  analysisManager->CreateNtupleDColumn("z2_y");
+  analysisManager->CreateNtupleDColumn("z2_z");
+  analysisManager->CreateNtupleDColumn("z2_energy");
+  analysisManager->CreateNtupleDColumn("z2_mass");
+  analysisManager->CreateNtupleDColumn("z2_charge");
+  analysisManager->CreateNtupleDColumn("z3_x");
+  analysisManager->CreateNtupleDColumn("z3_y");
+  analysisManager->CreateNtupleDColumn("z3_z");
+  analysisManager->CreateNtupleDColumn("z3_energy");
+  analysisManager->CreateNtupleDColumn("z3_mass");
+  analysisManager->CreateNtupleDColumn("z3_charge");
+  analysisManager->CreateNtupleDColumn("z4_x");
+  analysisManager->CreateNtupleDColumn("z4_y");
+  analysisManager->CreateNtupleDColumn("z4_z");
+  analysisManager->CreateNtupleDColumn("z4_energy");
+  analysisManager->CreateNtupleDColumn("z4_mass");
+  analysisManager->CreateNtupleDColumn("z4_charge");
+  analysisManager->CreateNtupleDColumn("z5_x");
+  analysisManager->CreateNtupleDColumn("z5_y");
+  analysisManager->CreateNtupleDColumn("z5_z");
+  analysisManager->CreateNtupleDColumn("z5_energy");
+  analysisManager->CreateNtupleDColumn("z5_mass");
+  analysisManager->CreateNtupleDColumn("z5_charge");
 
   analysisManager->FinishNtuple();
 

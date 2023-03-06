@@ -58,11 +58,13 @@
 #include "G4HadronicParameters.hh"
 #include "G4InelasticCoulombScattering.hh"
 
+#include "G4StepLimiterPhysics.hh"
+
 
 PhysicsList::PhysicsList() : G4VModularPhysicsList()
 {
 
-  fEmName = G4String("emstandard_opt4");
+  fEmName = G4String("G4EmStandardPhysics_option4");
   fEmPhysicsList = new G4EmStandardPhysics_option4();
   G4LossTableManager::Instance();
   defaultCutValue = 1.*CLHEP::km;
@@ -78,7 +80,9 @@ PhysicsList::PhysicsList() : G4VModularPhysicsList()
   deex->SetStoreAllLevels(true);
   deex->SetIsomerProduction(true);
   deex->SetMaxLifeTime(G4NuclideTable::GetInstance()->GetThresholdOfHalfLife()
-                /std::log(2.));
+      /std::log(2.));
+
+  RegisterPhysics(new G4StepLimiterPhysics());
 
 }
 
@@ -88,7 +92,7 @@ PhysicsList::~PhysicsList()
 
 void PhysicsList::ConstructParticle()
 {
-  G4BosonConstructor  pBosonConstructor;
+    G4BosonConstructor  pBosonConstructor;
     pBosonConstructor.ConstructParticle();
 
     G4LeptonConstructor pLeptonConstructor;
@@ -120,7 +124,7 @@ void PhysicsList::ConstructProcess()
 
   AddRadioactiveDecay();
 
-  AddCoulomb();
+  //AddCoulomb();
 
 }
 
